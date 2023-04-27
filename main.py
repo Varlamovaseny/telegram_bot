@@ -2,6 +2,7 @@ import logging
 from telegram.ext import Application, CommandHandler, filters, MessageHandler
 from telegram import ReplyKeyboardMarkup
 import sqlite3
+import random
 
 BOT_TOKEN = "5726600026:AAFYoGWEVQ8oWlJZJMQRLYTk_G-thDQFbQQ"
 conn = sqlite3.connect('profiles.db')
@@ -22,9 +23,10 @@ logger = logging.getLogger(__name__)
 reply_keyboard = [['boy', 'girl']]
 markup = ReplyKeyboardMarkup(reply_keyboard, one_time_keyboard=False)
 user_id = [""]
-data_buttons = ['boy', 'girl', '14-18', '18-25', '25-35', '35+', '+', '-']
-gender = []
-age = []
+data_buttons = ['парень', 'девушка', '14-18', '18-25', '25-35', '35-60', '+', '-']
+gender_pers = ['']
+age_pers = ['']
+result = []
 
 
 # Определяем функцию-обработчик сообщений.
@@ -54,17 +56,17 @@ async def boy(update, context):
 async def profile(update, context):
     t = '\n'
     if update.message.text == data_buttons[0]:
-        reply_keyboard[0] = ['14-18', '18-25', '25-35', '35+']
+        reply_keyboard[0] = ['14-18', '18-25', '25-35', '35-90']
         markup = ReplyKeyboardMarkup(reply_keyboard, one_time_keyboard=False)
         await update.message.reply_text(rf"Хорошо! Теперь укажи возраст, который тебя интересует.", reply_markup=markup)
-        gender.append(update.message.text)
+        gender_pers[0] = update.message.text
         return 0
 
     elif update.message.text == data_buttons[1]:
-        reply_keyboard[0] = ['14-18', '18-25', '25-35', '35+']
+        reply_keyboard[0] = ['14-18', '18-25', '25-35', '35-90']
         markup = ReplyKeyboardMarkup(reply_keyboard, one_time_keyboard=False)
         await update.message.reply_text(rf"Хорошо! Теперь укажи возраст, который тебя интересует.", reply_markup=markup)
-        gender.append(update.message.text)
+        gender_pers[0] = update.message.text
         return 0
 
     elif update.message.text == data_buttons[2]:
@@ -72,7 +74,7 @@ async def profile(update, context):
         markup = ReplyKeyboardMarkup(reply_keyboard, one_time_keyboard=False)
         await update.message.reply_text(
             rf"Хорошо! Теперь давай начнем искать тебе собеседника :3{t}Нажми - чтобы начать! ", reply_markup=markup)
-        age.append(update.message.text)
+        age_pers[0] = update.message.text
         return 0
 
     elif update.message.text == data_buttons[3]:
@@ -80,7 +82,7 @@ async def profile(update, context):
         markup = ReplyKeyboardMarkup(reply_keyboard, one_time_keyboard=False)
         await update.message.reply_text(
             rf"Хорошо! Теперь давай начнем искать тебе собеседника :3{t}Нажми - чтобы начать! ", reply_markup=markup)
-        age.append(update.message.text)
+        age_pers[0] = update.message.text
         return 0
 
     elif update.message.text == data_buttons[4]:
@@ -88,7 +90,7 @@ async def profile(update, context):
         markup = ReplyKeyboardMarkup(reply_keyboard, one_time_keyboard=False)
         await update.message.reply_text(
             rf"Хорошо! Теперь давай начнем искать тебе собеседника :3{t}Нажми - чтобы начать! ", reply_markup=markup)
-        age.append(update.message.text)
+        age_pers[0] = update.message.text
         return 0
 
     elif update.message.text == data_buttons[5]:
@@ -96,11 +98,38 @@ async def profile(update, context):
         markup = ReplyKeyboardMarkup(reply_keyboard, one_time_keyboard=False)
         await update.message.reply_text(
             rf"Хорошо! Теперь давай начнем искать тебе собеседника :3{t}Нажми - чтобы начать! ", reply_markup=markup)
-        age.append(update.message.text)
+        age_pers[0] = update.message.text
+        return 0
+
+    elif update.message.text == data_buttons[6]:
+        reply_keyboard[0] = ['+', '-']
+        markup = ReplyKeyboardMarkup(reply_keyboard, one_time_keyboard=False)
+        await update.message.reply_text(
+            rf"Прикольно", reply_markup=markup)
+        return 0
+
+    elif update.message.text == data_buttons[7]:
+        reply_keyboard[0] = ['+', '-']
+        cur.execute("SELECT * FROM profiles;")
+        all_result = cur.fetchall()
+        print(all_result)
+        all_result = list(filter(
+            lambda x: x[2].lower() == gender_pers[0] and int(age_pers[0][0:2]) <= int(x[3]) <= int(age_pers[0][3:]) and
+                      x[0] not in result,
+            all_result))
+        if len(all_result) == 0:
+            await update.message.reply_text("К сожалению, анкет больше нет :(. Возвращайтесь позже!")
+            return 0
+        a = random.choice(all_result)
+        result.append(a[0])
+        markup = ReplyKeyboardMarkup(reply_keyboard, one_time_keyboard=False)
+        await update.message.reply_text(
+            rf"{a[1]}{t}{a[2]}{t}{a[3]}{t}{a[4]}", reply_markup=markup)
         return 0
 
     data = update.message.text.split("\n")
-    data = (user_id[0], data[0], data[1], int(data[2]), "\n".join(data[3:]))
+    data = (user_id[0], data[0], data[1].lower(), int(data[2]), "\n".join(data[3:]))
+    reply_keyboard[0] = ['парень', 'девушка']
     markup = ReplyKeyboardMarkup(reply_keyboard, one_time_keyboard=False)
     await update.message.reply_text(
         rf"Готово! Теперь ты можешь начать общение! Выбери, кто тебя интересует больше?", reply_markup=markup
@@ -132,6 +161,3 @@ def main():
 
 if __name__ == '__main__':
     main()
-cur.execute("SELECT * FROM profiles ;")
-three_results = cur.fetchall()
-print(three_results)
