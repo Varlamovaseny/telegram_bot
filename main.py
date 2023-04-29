@@ -12,7 +12,9 @@ cur.execute("""CREATE TABLE IF NOT EXISTS profiles(
    name TEXT,
    gender TEXT,
    age TEXT,
-   info TEXT);
+   info TEXT,
+   plus_me TEXT,
+   user_name TEXT);
 """)
 conn.commit()
 logging.basicConfig(
@@ -26,7 +28,9 @@ user_id = [""]
 data_buttons = ['парень', 'девушка', '14-18', '18-25', '25-35', '35-60', '+', '-']
 gender_pers = ['']
 age_pers = ['']
+name_user = ['']
 result = []
+fav = []
 
 
 # Определяем функцию-обработчик сообщений.
@@ -35,6 +39,7 @@ async def start(update, context):
     """Отправляет сообщение когда получена команда /start"""
     user = update.effective_user
     user_id[0] = user.id
+    name_user[0] = user.mention_html()
     t = '\n'
     await update.message.reply_html(
         rf"Приветик, {user.mention_html()}! Я бот для знакомств. Чтобы начать общение, тебе нужно сделать анкету в следующем формате:"
@@ -49,12 +54,9 @@ async def start(update, context):
     )
 
 
-async def boy(update, context):
-    await update.message.reply_html(rf"Хорошо! Какой возраст тебя интересует?")
-
-
 async def profile(update, context):
     t = '\n'
+    data = [""]
     if update.message.text == data_buttons[0]:
         reply_keyboard[0] = ['14-18', '18-25', '25-35', '35-90']
         markup = ReplyKeyboardMarkup(reply_keyboard, one_time_keyboard=False)
@@ -104,15 +106,30 @@ async def profile(update, context):
     elif update.message.text == data_buttons[6]:
         reply_keyboard[0] = ['+', '-']
         markup = ReplyKeyboardMarkup(reply_keyboard, one_time_keyboard=False)
-        await update.message.reply_text(
-            rf"Прикольно", reply_markup=markup)
+        cur.execute(f"SELECT plus_me FROM profiles WHERE id='{result[-1]}'")
+        plus_h = cur.fetchall()
+        if data[0] in plus_h:
+            cur.execute(f"SELECT user_name FROM profiles WHERE id='{result[-1]}'")
+            id_fav = cur.fetchone()
+            await update.message.reply_html(
+                rf"Ого! Вы понравились друг другу! Теперь ты можешь написать {id_fav} или нажми -, чтобы продолжить!",
+                reply_markup=markup)
+        else:
+            my_plus = list(f"SELECT plus_me FROM profiles WHERE id='{data[0]}'")
+            my_plus.append(result[-1])
+            me = str(data[0])
+            cur.execute("UPDATE profiles SET plus_me=? WHERE id=?", (str(my_plus), me))
+            await update.message.reply_text(
+                "Как только он/она также оценит твою анкету, тебе напишут! А пока давай продолжим! Нажми - :3",
+                reply_markup=markup
+            )
         return 0
+
 
     elif update.message.text == data_buttons[7]:
         reply_keyboard[0] = ['+', '-']
         cur.execute("SELECT * FROM profiles;")
         all_result = cur.fetchall()
-        print(all_result)
         all_result = list(filter(
             lambda x: x[2].lower() == gender_pers[0] and int(age_pers[0][0:2]) <= int(x[3]) <= int(age_pers[0][3:]) and
                       x[0] not in result,
@@ -128,14 +145,14 @@ async def profile(update, context):
         return 0
 
     data = update.message.text.split("\n")
-    data = (user_id[0], data[0], data[1].lower(), int(data[2]), "\n".join(data[3:]))
+    data = (user_id[0], data[0], data[1].lower(), int(data[2]), "\n".join(data[3:]), "", name_user[0])
     reply_keyboard[0] = ['парень', 'девушка']
     markup = ReplyKeyboardMarkup(reply_keyboard, one_time_keyboard=False)
     await update.message.reply_text(
         rf"Готово! Теперь ты можешь начать общение! Выбери, кто тебя интересует больше?", reply_markup=markup
     )
 
-    cur.execute("INSERT INTO profiles VALUES(?, ?, ?, ?, ?);", data)
+    cur.execute("INSERT INTO profiles VALUES(?, ?, ?, ?, ?, ?, ?);", data)
     conn.commit()
 
 
@@ -144,7 +161,6 @@ def main():
     # Вместо слова "TOKEN" надо разместить полученный от @BotFather токен
     application = Application.builder().token(BOT_TOKEN).build()
     application.add_handler(CommandHandler("start", start))
-    application.add_handler(CommandHandler("boy", boy))
     # Создаём обработчик сообщений типа filters.TEXT
     # из описанной выше асинхронной функции echo()
     # После регистрации обработчика в приложении
